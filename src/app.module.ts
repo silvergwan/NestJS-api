@@ -6,7 +6,11 @@ import { StaysModule } from './stays/stays.module';
 import { ReservationsModule } from './reservations/reservations.module';
 
 @Module({
-  imports: [MongooseModule.forRoot('mongodb://localhost/fineStay'), StaysModule, ReservationsModule],
+  imports: [
+    MongooseModule.forRoot('mongodb://localhost/fineStay'),
+    StaysModule,
+    ReservationsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

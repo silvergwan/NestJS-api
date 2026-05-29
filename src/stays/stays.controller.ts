@@ -3,20 +3,20 @@ import { StaysService } from './stays.service';
 
 @Controller('stays')
 export class StaysController {
-    constructor(private readonly staysService: StaysService) {}
+  constructor(private readonly staysService: StaysService) {}
 
-    @Get()
-    findAll() {
-        return this.staysService.findAll();
-    }
+  @Get()
+  findAll() {
+    return this.staysService.findAll();
+  }
 
-    @Get(":id")
-    findOne(@Param('id') id: string){
-        return this.staysService.findOne(id);
-    }
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.staysService.findOne(id);
+  }
 
-    @Post()
-    create(@Body() body: { name: string; location: string; price: number }){
-        return this.staysService.create(body);
-    }
+  @Post()
+  create(@Body() body: { name: string; location: string; price: number }) {
+    return this.staysService.create(body);
+  }
 }

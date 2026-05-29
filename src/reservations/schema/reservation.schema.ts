@@ -34,9 +34,9 @@ export class Reservation {
   totalPrice!: number;
 
   // 예약 상태
-  @Prop({ 
+  @Prop({
     enum: ['pending', 'confirmed', 'cancelled'],
-    default: 'pending'
+    default: 'pending',
   })
   status!: string;
 }

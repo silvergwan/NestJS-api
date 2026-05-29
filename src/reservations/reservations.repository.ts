@@ -6,7 +6,8 @@ import { Reservation, ReservationDocument } from './schema/reservation.schema';
 @Injectable()
 export class ReservationsRepository {
   constructor(
-    @InjectModel(Reservation.name) private reservationModel: Model<ReservationDocument>,
+    @InjectModel(Reservation.name)
+    private reservationModel: Model<ReservationDocument>,
   ) {}
 
   async findAll(): Promise<Reservation[]> {
@@ -17,9 +18,10 @@ export class ReservationsRepository {
     return this.reservationModel.findById(id).exec();
   }
 
-  // 특정 숙소의 예약 목록 조회 - 날짜 중복 체크에 씁니다
   async findByStayId(stayId: string): Promise<Reservation[]> {
-    return this.reservationModel.find({ stayId, status: { $ne: 'cancelled' } }).exec();
+    return this.reservationModel
+      .find({ stayId, status: { $ne: 'cancelled' } })
+      .exec();
   }
 
   async create(data: Partial<Reservation>): Promise<Reservation> {
@@ -27,8 +29,13 @@ export class ReservationsRepository {
     return reservation.save();
   }
 
-  async update(id: string, data: Partial<Reservation>): Promise<Reservation | null> {
-    return this.reservationModel.findByIdAndUpdate(id, data, { new: true }).exec();
+  async update(
+    id: string,
+    data: Partial<Reservation>,
+  ): Promise<Reservation | null> {
+    return this.reservationModel
+      .findByIdAndUpdate(id, data, { new: true })
+      .exec();
   }
 
   async delete(id: string): Promise<Reservation | null> {
