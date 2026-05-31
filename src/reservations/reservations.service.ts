@@ -20,7 +20,7 @@ export class ReservationsService {
     const { stayId, checkIn, checkOut } = data;
 
     const newCheckIn = new Date(checkIn!);
-    const newCheckOut = new Date(checkIn!);
+    const newCheckOut = new Date(checkOut!);
 
     const existingReservations = await this.reservationsRepository.findByStayId(
       String(stayId),
