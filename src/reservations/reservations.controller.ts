@@ -8,6 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
+import { CreateReservationDto } from './dto/create-reservation.dto';
 import { Reservation } from './schema/reservation.schema';
 
 @Controller('reservations')
@@ -25,7 +26,7 @@ export class ReservationsController {
   }
 
   @Post()
-  create(@Body() body: Partial<Reservation>) {
+  create(@Body() body: CreateReservationDto) {
     return this.reservationsService.create(body);
   }
 

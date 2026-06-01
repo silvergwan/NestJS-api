@@ -3,6 +3,8 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { ReservationsRepository } from './reservations.repository';
 import { Reservation } from './schema/reservation.schema';
+import { CreateReservationDto } from './dto/create-reservation.dto';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class ReservationsService {
@@ -19,11 +21,10 @@ export class ReservationsService {
     return this.reservationsRepository.findById(id);
   }
 
-  async create(data: Partial<Reservation>): Promise<Reservation> {
+  async create(data: CreateReservationDto): Promise<Reservation> {
     const { stayId, checkIn, checkOut } = data;
-
-    const newCheckIn = new Date(checkIn!);
-    const newCheckOut = new Date(checkOut!);
+    const newCheckIn = new Date(checkIn);
+    const newCheckOut = new Date(checkOut);
 
     const session = await this.connection.startSession();
 
@@ -32,10 +33,7 @@ export class ReservationsService {
 
       await session.withTransaction(async () => {
         const existingReservations =
-          await this.reservationsRepository.findByStayId(
-            String(stayId),
-            session,
-          );
+          await this.reservationsRepository.findByStayId(stayId, session);
 
         const isOverlap = existingReservations.some(
           (reservation) =>
@@ -58,12 +56,21 @@ export class ReservationsService {
               })),
           });
         }
-        result = await this.reservationsRepository.create(data, session);
+
+        result = await this.reservationsRepository.create(
+          {
+            ...data,
+            stayId: new Types.ObjectId(stayId), // string → ObjectId 변환
+            checkIn: newCheckIn,
+            checkOut: newCheckOut,
+          },
+          session,
+        );
       });
 
       return result!;
     } finally {
-      session.endSession;
+      session.endSession();
     }
   }
 
