@@ -33,7 +33,19 @@ export class ReservationsService {
     );
 
     if (isOverlap) {
-      throw new BadRequestException('이미 예약된 날짜입니다.');
+      throw new BadRequestException({
+        message: '이미 예약된 날짜입니다.',
+        conflictDates: existingReservations
+          .filter(
+            (reservation) =>
+              newCheckIn < new Date(reservation.checkOut) &&
+              newCheckOut > new Date(reservation.checkIn),
+          )
+          .map((reservation) => ({
+            checkIn: reservation.checkIn,
+            checkOut: reservation.checkOut,
+          })),
+      });
     }
 
     return this.reservationsRepository.create(data);
