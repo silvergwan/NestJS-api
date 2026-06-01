@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 import { ReservationsRepository } from './reservations.repository';
 import { Reservation } from './schema/reservation.schema';
 
@@ -6,6 +8,7 @@ import { Reservation } from './schema/reservation.schema';
 export class ReservationsService {
   constructor(
     private readonly reservationsRepository: ReservationsRepository,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async findAll(): Promise<Reservation[]> {
@@ -22,33 +25,46 @@ export class ReservationsService {
     const newCheckIn = new Date(checkIn!);
     const newCheckOut = new Date(checkOut!);
 
-    const existingReservations = await this.reservationsRepository.findByStayId(
-      String(stayId),
-    );
+    const session = await this.connection.startSession();
 
-    const isOverlap = existingReservations.some(
-      (reservation) =>
-        newCheckIn < new Date(reservation.checkOut) &&
-        newCheckOut > new Date(reservation.checkIn),
-    );
+    try {
+      let result: Reservation;
 
-    if (isOverlap) {
-      throw new BadRequestException({
-        message: '이미 예약된 날짜입니다.',
-        conflictDates: existingReservations
-          .filter(
-            (reservation) =>
-              newCheckIn < new Date(reservation.checkOut) &&
-              newCheckOut > new Date(reservation.checkIn),
-          )
-          .map((reservation) => ({
-            checkIn: reservation.checkIn,
-            checkOut: reservation.checkOut,
-          })),
+      await session.withTransaction(async () => {
+        const existingReservations =
+          await this.reservationsRepository.findByStayId(
+            String(stayId),
+            session,
+          );
+
+        const isOverlap = existingReservations.some(
+          (reservation) =>
+            newCheckIn < new Date(reservation.checkOut) &&
+            newCheckOut > new Date(reservation.checkIn),
+        );
+
+        if (isOverlap) {
+          throw new BadRequestException({
+            message: '이미 예약된 날짜입니다.',
+            conflictDates: existingReservations
+              .filter(
+                (reservation) =>
+                  newCheckIn < new Date(reservation.checkOut) &&
+                  newCheckOut > new Date(reservation.checkIn),
+              )
+              .map((reservation) => ({
+                checkIn: reservation.checkIn,
+                checkOut: reservation.checkOut,
+              })),
+          });
+        }
+        result = await this.reservationsRepository.create(data, session);
       });
-    }
 
-    return this.reservationsRepository.create(data);
+      return result!;
+    } finally {
+      session.endSession;
+    }
   }
 
   async update(
