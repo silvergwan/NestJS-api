@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { ReservationsRepository } from './reservations.repository';
@@ -17,8 +21,14 @@ export class ReservationsService {
     return this.reservationsRepository.findAll();
   }
 
-  async findOne(id: string): Promise<Reservation | null> {
-    return this.reservationsRepository.findById(id);
+  async findOne(id: string): Promise<Reservation> {
+    const reservation = await this.reservationsRepository.findById(id);
+
+    if (!reservation) {
+      throw new NotFoundException(`${id}에 해당하는 예약이 없습니다.`);
+    }
+
+    return reservation;
   }
 
   async create(data: CreateReservationDto): Promise<Reservation> {
