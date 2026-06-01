@@ -2,22 +2,22 @@ import { IsString, IsNumber, IsArray, IsOptional, Min } from 'class-validator';
 
 export class CreateStayDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  location: string;
+  location!: string;
 
   @IsNumber()
   @Min(0)
-  pricePerNight: number;
+  pricePerNight!: number;
 
   @IsNumber()
   @Min(1)
-  maxGuests: number;
+  maxGuests!: number;
 
   @IsNumber()
   @Min(1)
-  rooms: number;
+  rooms!: number;
 
   @IsArray()
   @IsString({ each: true }) // 배열 안의 요소 하나하나가 string인지 검증

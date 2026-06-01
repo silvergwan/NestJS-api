@@ -3,25 +3,25 @@ import { IsMongoId } from 'class-validator';
 
 export class CreateReservationDto {
   @IsMongoId() // MongoDB ObjectId 형식인지 검증
-  stayId: string;
+  stayId!: string;
 
   @IsString()
-  guestName: string;
+  guestName!: string;
 
   @IsString()
-  guestPhone: string;
+  guestPhone!: string;
 
   @IsDateString() // "2026-07-10" 형식인지 검증
-  checkIn: string;
+  checkIn!: string;
 
   @IsDateString()
-  checkOut: string;
+  checkOut!: string;
 
   @IsNumber()
   @Min(1)
-  guestCount: number;
+  guestCount!: number;
 
   @IsNumber()
   @Min(0)
-  totalPrice: number;
+  totalPrice!: number;
 }
