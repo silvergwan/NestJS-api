@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { ClientSession, Model } from 'mongoose';
 import { Reservation, ReservationDocument } from './schema/reservation.schema';
 
 @Injectable()
@@ -18,15 +18,22 @@ export class ReservationsRepository {
     return this.reservationModel.findById(id).exec();
   }
 
-  async findByStayId(stayId: string): Promise<Reservation[]> {
+  async findByStayId(
+    stayId: string,
+    session?: ClientSession,
+  ): Promise<Reservation[]> {
     return this.reservationModel
       .find({ stayId, status: { $ne: 'cancelled' } })
+      .session(session ?? null)
       .exec();
   }
 
-  async create(data: Partial<Reservation>): Promise<Reservation> {
+  async create(
+    data: Partial<Reservation>,
+    session: ClientSession,
+  ): Promise<Reservation> {
     const reservation = new this.reservationModel(data);
-    return reservation.save();
+    return reservation.save({ session });
   }
 
   async update(
