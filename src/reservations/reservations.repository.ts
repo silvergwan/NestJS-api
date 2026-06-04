@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { Reservation, ReservationDocument } from './schema/reservation.schema';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class ReservationsRepository {
@@ -23,7 +24,10 @@ export class ReservationsRepository {
     session?: ClientSession,
   ): Promise<Reservation[]> {
     return this.reservationModel
-      .find({ stayId, status: { $ne: 'cancelled' } })
+      .find({
+        stayId: new Types.ObjectId(stayId),
+        status: { $ne: 'cancelled' },
+      })
       .session(session ?? null)
       .exec();
   }
