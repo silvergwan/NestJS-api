@@ -1,0 +1,47 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main # main 브랜치에 푸시하면 자동 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: amd64로 빌드 및 푸시
+        uses: docker/setup-buildx-action@v2
+
+      - name: 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: silvergwan/finestay-api:latest
+
+      - name: EC2 배포
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            docker pull silvergwan/finestay-api:latest
+            docker stop finestay-api || true
+            docker rm finestay-api || true
+            docker run -d \
+              --name finestay-api \
+              -p 3000:3000 \
+              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              silvergwan/finestay-api:latest
