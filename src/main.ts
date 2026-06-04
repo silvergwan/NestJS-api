@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -9,11 +10,22 @@ async function bootstrap() {
   // 요청이 들어올 때마다 DTO 규칙대로 자동 검증
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,            // DTO에 없는 필드는 자동으로 제거
+      whitelist: true, // DTO에 없는 필드는 자동으로 제거
       forbidNonWhitelisted: true, // DTO에 없는 필드 들어오면 400 에러
-      transform: true,            // 타입 자동 변환 (string → number 등)
+      transform: true, // 타입 자동 변환 (string → number 등)
     }),
   );
+
+  // 스웨거
+  const config = new DocumentBuilder()
+    .setTitle('FineStay API')
+    .setDescription('독채 숙소 예약 플랫폼 API')
+    .setVersion('1.0')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
