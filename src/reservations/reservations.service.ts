@@ -40,7 +40,6 @@ export class ReservationsService {
 
     try {
       let result: Reservation;
-      let conflictError: BadRequestException | null = null;
 
       await session.withTransaction(async () => {
         const existingReservations =
@@ -52,16 +51,15 @@ export class ReservationsService {
             newCheckOut > new Date(reservation.checkIn),
         );
 
+        // 에러를 변수에 저장했다 주는 방식에서 바로 발생
         if (overlapping.length > 0) {
-          // 에러를 바로 던지지 않고 변수에 저장
-          conflictError = new BadRequestException({
+          throw new BadRequestException({
             message: '이미 예약된 날짜입니다.',
             conflictDates: overlapping.map((reservation) => ({
               checkIn: reservation.checkIn,
               checkOut: reservation.checkOut,
             })),
           });
-          return; // 트랜잭션 종료
         }
 
         result = await this.reservationsRepository.create(
@@ -74,10 +72,6 @@ export class ReservationsService {
           session,
         );
       });
-
-      if (conflictError) {
-        throw conflictError;
-      }
 
       return result!;
     } finally {
