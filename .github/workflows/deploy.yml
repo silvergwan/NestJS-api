@@ -1,9 +1,9 @@
-name: Deploy to EC2
+name: Deploy to ECS
 
 on:
   push:
     branches:
-      - main # main 브랜치에 푸시하면 자동 실행되겠지?
+      - main
 
 jobs:
   deploy:
@@ -13,35 +13,29 @@ jobs:
       - name: 코드 체크아웃
         uses: actions/checkout@v3
 
-      - name: Docker Hub 로그인
-        uses: docker/login-action@v2
+      - name: AWS 자격증명 설정
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
 
-      - name: amd64로 빌드 및 푸시
-        uses: docker/setup-buildx-action@v2
+      - name: ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: 이미지 빌드 및 푸시
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: silvergwan/finestay-api:latest
+      - name: 이미지 빌드 및 ECR 푸시
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker buildx create --use
+          docker buildx build --platform linux/amd64 \
+            -t $ECR_REGISTRY/finestay-api:latest \
+            --push .
 
-      - name: EC2 배포
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_KEY }}
-          script: |
-            docker pull silvergwan/finestay-api:latest
-            docker stop finestay-api || true
-            docker rm finestay-api || true
-            docker run -d \
-              --name finestay-api \
-              -p 3000:3000 \
-              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-              silvergwan/finestay-api:latest
+      - name: ECS 서비스 재배포
+        run: |
+          aws ecs update-service \
+            --cluster finestay-cluster \
+            --service finestay-service \
+            --force-new-deployment
