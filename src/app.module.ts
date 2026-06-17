@@ -5,11 +5,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { StaysModule } from './stays/stays.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGODB_URI!),
+    RedisModule,
     StaysModule,
     ReservationsModule,
   ],
