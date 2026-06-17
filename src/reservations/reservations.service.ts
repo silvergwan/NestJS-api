@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
   Inject,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
@@ -42,7 +43,7 @@ export class ReservationsService {
 
     const lockKey = `reservation:lock:stayId:${stayId}`;
     const lockTtl = 5000;
-    let lock: Lock;
+    let lock: Lock | null = null;
 
     try {
       // 락 획득 시도 (retryCount만큼 재시도 후 실패하면 예외 발생)
@@ -57,7 +58,8 @@ export class ReservationsService {
     const session = await this.connection.startSession();
 
     try {
-      let result: Reservation;
+      let result: Reservation | null = null;
+      let shouldThrow: BadRequestException | null = null;
 
       await session.withTransaction(async () => {
         const existingReservations =
@@ -69,15 +71,15 @@ export class ReservationsService {
             newCheckOut > new Date(reservation.checkIn),
         );
 
-        // 에러를 변수에 저장했다 주는 방식에서 바로 발생
         if (overlapping.length > 0) {
-          throw new BadRequestException({
+          shouldThrow = new BadRequestException({
             message: '이미 예약된 날짜입니다.',
             conflictDates: overlapping.map((reservation) => ({
               checkIn: reservation.checkIn,
               checkOut: reservation.checkOut,
             })),
           });
+          return; // 트랜잭션 정상 종료
         }
 
         result = await this.reservationsRepository.create(
@@ -91,10 +93,20 @@ export class ReservationsService {
         );
       });
 
-      return result!;
+      if (shouldThrow) throw shouldThrow;
+
+      if (!result) {
+        throw new InternalServerErrorException('예약 생성에 실패했습니다.');
+      }
+
+      return result;
     } finally {
       session.endSession();
-      await lock.release();
+      try {
+        await lock?.release();
+      } catch (err) {
+        console.error(`락 해제 실패 - key: ${lockKey}`, err);
+      }
     }
   }
 
