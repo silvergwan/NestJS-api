@@ -33,9 +33,39 @@ jobs:
             -t $ECR_REGISTRY/finestay-api:latest \
             --push .
 
-      - name: ECS 서비스 재배포
+      - name: Task Definition 업데이트 및 ECS 배포
         run: |
+          aws ecs register-task-definition \
+            --family finestay-task \
+            --network-mode awsvpc \
+            --requires-compatibilities FARGATE \
+            --cpu 1024 \
+            --memory 2048 \
+            --execution-role-arn arn:aws:iam::023952094358:role/service-role/ecsTaskExecutionRole \
+            --runtime-platform '{"cpuArchitecture":"X86_64","operatingSystemFamily":"LINUX"}' \
+            --container-definitions '[
+              {
+                "name": "finestay-api",
+                "image": "023952094358.dkr.ecr.ap-southeast-2.amazonaws.com/finestay-api:latest",
+                "portMappings": [{"containerPort": 3000, "hostPort": 3000, "protocol": "tcp"}],
+                "essential": true,
+                "environment": [
+                  {"name": "MONGODB_URI", "value": "${{ secrets.MONGODB_URI }}"},
+                  {"name": "REDIS_URL", "value": "${{ secrets.REDIS_URL }}"}
+                ],
+                "logConfiguration": {
+                  "logDriver": "awslogs",
+                  "options": {
+                    "awslogs-group": "/aws/ecs/default/finestay-cluster-dff9",
+                    "awslogs-region": "ap-southeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                }
+              }
+            ]'
+
           aws ecs update-service \
             --cluster finestay-cluster \
             --service finestay-service \
+            --task-definition finestay-task \
             --force-new-deployment
