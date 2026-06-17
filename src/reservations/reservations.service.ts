@@ -2,18 +2,22 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import { Connection, Types } from 'mongoose';
+import Redlock, { Lock } from 'redlock';
+
 import { ReservationsRepository } from './reservations.repository';
 import { Reservation } from './schema/reservation.schema';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import { Types } from 'mongoose';
+import { REDLOCK_CLIENT } from '../redis/redis.module';
 
 @Injectable()
 export class ReservationsService {
   constructor(
     private readonly reservationsRepository: ReservationsRepository,
+    @Inject(REDLOCK_CLIENT) private readonly redlock: Redlock,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
@@ -35,6 +39,20 @@ export class ReservationsService {
     const { stayId, checkIn, checkOut } = data;
     const newCheckIn = new Date(checkIn);
     const newCheckOut = new Date(checkOut);
+
+    const lockKey = `reservation:lock:stayId:${stayId}`;
+    const lockTtl = 5000;
+    let lock: Lock;
+
+    try {
+      // 락 획득 시도 (retryCount만큼 재시도 후 실패하면 예외 발생)
+      lock = await this.redlock.acquire([lockKey], lockTtl);
+    } catch (err) {
+      // 락 획득 실패 = 해당 숙소에 동시 요청이 몰린 상황
+      throw new BadRequestException(
+        '잠시 후 다시 시도해주세요. (동시 요청 충돌)',
+      );
+    }
 
     const session = await this.connection.startSession();
 
@@ -76,6 +94,7 @@ export class ReservationsService {
       return result!;
     } finally {
       session.endSession();
+      await lock.release();
     }
   }
 
